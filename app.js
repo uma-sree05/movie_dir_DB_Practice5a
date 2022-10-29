@@ -16,8 +16,8 @@ const initializingDBandServer = async () => {
       filename: databasePath,
       driver: sqlite3.Database,
     });
-    app.listen(3002, () =>
-      console.log("Server Running at http://localhost:3003/")
+    app.listen(3000, () =>
+      console.log("Server Running at http://localhost:3000/")
     );
   } catch (error) {
     console.log(`DB Error:${error.message}`);
@@ -31,7 +31,7 @@ const convertMovieObjectToResponseObject = (movie) => {
     movieId: movie.movie_id,
     movieName: movie.movie_name,
     directorId: movie.director_id,
-    leadActor: movie.leadActor,
+    leadActor: movie.lead_actor,
   };
 };
 
@@ -47,7 +47,7 @@ app.get("/movies/", async (request, response) => {
   const getMovies = `
   SELECT
    *
-  FROM 
+  FROM
    movie;`;
   const moviesArr = await database.all(getMovies);
   response.send(
@@ -57,22 +57,23 @@ app.get("/movies/", async (request, response) => {
 
 //CREATE MovieDetails
 app.post("/movies/", async (request, response) => {
-  const { directorId, movieName, leadActor } = request.body;
+  const { directorId, movieName, leadActor } = request.params;
   const createMovie = `
   INSERT INTO
-  movies(director_id,movie_name,lead_actor) 
+  movie(movie_name,director_id,lead_actor)
   VALUES(
-  '${directorId}',
   '${movieName}',
+  '${directorId}',
   '${leadActor}'
   );`;
-  const movie = await database.run(createMovie);
+  await database.run(createMovie);
   response.send("Movie Successfully Added");
 });
 
 //GET Single Movie
 app.get("/movies/:movieId/", async (request, response) => {
   const { movieId } = request.params;
+  console.log(movieId);
   const getMovieDetails = `
     SELECT *
      FROM movie
@@ -80,23 +81,23 @@ app.get("/movies/:movieId/", async (request, response) => {
     movie_id=${movieId};`;
 
   const movie = await database.get(getMovieDetails);
+  console.log(movie);
   response.send(convertMovieObjectToResponseObject(movie));
 });
 
 //UPDATE Movie
 
 app.put("/movies/:movieId/", async (request, response) => {
-  const { directorId, movieName, leadActor } = request.body;
   const { movieId } = request.params;
+  const details = request.body;
+  const { directorId, movieName, leadActor } = details;
   const updateMovie = `
-    UPDATE
-     movie
-    SET
-    director_id=${directorId},
-    movie_name=${movieName},
-    lead_actor=${leadActor},
+    UPDATE movie set
+    director_id='${directorId}',
+    movie_name='${movieName}',
+    lead_actor='${leadActor}'
     WHERE
-    movie_id=${movie_id};`;
+    movie_id=${movieId};`;
 
   await database.run(updateMovie);
   response.send("Movie Details Updated");
@@ -122,9 +123,7 @@ app.get("/directors/", async (request, response) => {
 
   const directorArr = await database.all(getDirectors);
   response.send(
-    directorArr.map((eachDirector) =>
-      convertDirObjectToResponseObject(directorArr)
-    )
+    directorArr.map((eachMovie) => convertDirObjectToResponseObject(eachMovie))
   );
 });
 
@@ -132,6 +131,8 @@ app.get("/directors/", async (request, response) => {
 
 app.get("/directors/:directorId/movies/", async (request, response) => {
   const { directorId } = request.params;
+  console.log(directorId);
+
   const getDirectorDetails = `
     SELECT
     movie_name
